@@ -1,0 +1,4 @@
+<launch>
+    <node name="luggage_detection" pkg="palbator_grasp_cml_vision" type="luggage_detection.py" output="screen">
+    </node>
+</launch>

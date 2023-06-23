@@ -1,0 +1,12 @@
+opencv-python
+torch
+pyrealsense2
+numpy
+pandas
+requests
+Pillow
+psutil
+torchvision
+pyyaml
+tqdm
+ultralytics
