@@ -8,6 +8,8 @@ import cv2
 import pyrealsense2 as rs
 import numpy as np
 import torch
+import tf2_ros
+from geometry_msgs.msg import TransformStamped
 
 class ObjectDetectionNode:
     def __init__(self):
@@ -22,6 +24,7 @@ class ObjectDetectionNode:
         self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
         self.pipeline.start(self.config)
         self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
     def run(self):
         rate = rospy.Rate(10)  # 10Hz
@@ -51,7 +54,24 @@ class ObjectDetectionNode:
                 if label in ["suitcase", "handbag", "backpack"]:
                     # Publication des données
                     self.label_pub.publish(label)
+                    print("{0} at {1:.2f} m".format(label, z_milieu))    
                     self.z_milieu_pub.publish(z_milieu)
+
+                    # Création de la transformation TF
+                    transform = TransformStamped()
+                    transform.header.stamp = rospy.Time.now()
+                    transform.header.frame_id = 'col_camera_sensor_d455_link'  # Frame de référence global
+                    transform.child_frame_id = "OBJ_" + label + '_link' # Frame de l'objet détecté 
+                    transform.transform.translation.x = z_milieu
+                    transform.transform.translation.y = x_milieu
+                    transform.transform.translation.z = y_milieu
+                    transform.transform.rotation.x = 0.0
+                    transform.transform.rotation.y = 0.0
+                    transform.transform.rotation.z = 0.0
+                    transform.transform.rotation.w = 1.0
+                    
+                    # Diffusion de la transformation TF
+                    self.tf_broadcaster.sendTransform(transform)            
 
             image_msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
             self.image_pub.publish(image_msg)

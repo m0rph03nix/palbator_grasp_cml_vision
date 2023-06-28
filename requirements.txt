@@ -10,3 +10,4 @@ torchvision
 pyyaml
 tqdm
 ultralytics
+gitpython>=3.1.30

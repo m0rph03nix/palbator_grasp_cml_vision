@@ -27,7 +27,7 @@ RUN pip3 install --no-cache-dir -r /catkin_ws/src/palbator_grasp_cml_vision/requ
 # Copie du paquet ROS dans le répertoire de travail
 COPY palbator_grasp_cml_vision /catkin_ws/src/palbator_grasp_cml_vision
 
-           
+
 
 # Configuration de l'environnement ROS
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
@@ -37,6 +37,9 @@ RUN /bin/bash -c "source ~/.bashrc"
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && catkin_make"
 
 RUN chmod +x /catkin_ws/src/palbator_grasp_cml_vision/scripts/luggage_detection.py
+
+RUN apt-get install ntpdate -y
+CMD ["/bin/bash", "-c", "ntpdate 10.68.0.1"]
 
 # Exécution du nœud ROS spécifique
 CMD ["/bin/bash", "-c", "source /catkin_ws/devel/setup.bash && roslaunch palbator_grasp_cml_vision cml_vision.launch"]
