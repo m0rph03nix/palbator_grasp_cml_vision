@@ -21,8 +21,8 @@ class ObjectDetectionNode:
         self.bridge = CvBridge()
         self.pipeline = rs.pipeline()
         self.config = rs.config()
-        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 10)
-        self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 10)
+        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+        self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
         self.pipeline.start(self.config)
         self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
@@ -70,22 +70,22 @@ class ObjectDetectionNode:
                     self.label_pub.publish(label)
                     print("{0} at {1:.2f} m".format(label, z_milieu))    
                     self.z_milieu_pub.publish(z_milieu)
-
-                    # Création de la transformation TF
-                    transform = TransformStamped()
-                    transform.header.stamp = rospy.Time.now()
-                    transform.header.frame_id = 'col_camera_sensor_d455_link'  # Frame de référence global
-                    transform.child_frame_id = "OBJ_" + label + '_link' # Frame de l'objet détecté 
-                    transform.transform.translation.x = z_milieu
-                    transform.transform.translation.y = x_real
-                    transform.transform.translation.z = y_real
-                    transform.transform.rotation.x = 0.0
-                    transform.transform.rotation.y = 0.0
-                    transform.transform.rotation.z = 0.0
-                    transform.transform.rotation.w = 1.0
-                    
-                    # Diffusion de la transformation TF
-                    self.tf_broadcaster.sendTransform(transform)            
+                    if label == "handbag":
+                        # Création de la transformation TF
+                        transform = TransformStamped()
+                        transform.header.stamp = rospy.Time.now()
+                        transform.header.frame_id = 'col_camera_sensor_d455_link'  # Frame de référence global
+                        transform.child_frame_id = "OBJ_" + label + '_link' # Frame de l'objet détecté 
+                        transform.transform.translation.x = z_milieu
+                        transform.transform.translation.y = x_real
+                        transform.transform.translation.z = y_real
+                        transform.transform.rotation.x = 0.0
+                        transform.transform.rotation.y = 0.0
+                        transform.transform.rotation.z = 0.0
+                        transform.transform.rotation.w = 1.0
+                        
+                        # Diffusion de la transformation TF
+                        self.tf_broadcaster.sendTransform(transform)            
 
             image_msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
             self.image_pub.publish(image_msg)
