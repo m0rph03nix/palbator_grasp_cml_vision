@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import tf2_ros
 from geometry_msgs.msg import TransformStamped
+from math import sin, pi
 
 class ObjectDetectionNode:
     def __init__(self):
@@ -20,11 +21,22 @@ class ObjectDetectionNode:
         self.bridge = CvBridge()
         self.pipeline = rs.pipeline()
         self.config = rs.config()
-        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-        self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 10)
+        self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 10)
         self.pipeline.start(self.config)
         self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+
+
+    def getRealXY(self, x_ref, y_ref, distance, img_w=640, img_h=480, HFovDeg=90, VFovDeg=65):
+        
+        HFov = HFovDeg * pi / 180.0  # Horizontal field of view of the RealSense D455
+        VFov = VFovDeg * pi / 180.0
+        #Phi = (HFov / 2.0) * ( (2*neck_x)/self.image_w + 1)  #Angle from the center of the camera to neck_x
+        PhiX = (HFov / 2.0) *  (x_ref - img_w/2) / (img_w/2) #Angle from the center of the camera to neck_x
+        PhiY = (VFov / 2.0) *  (y_ref - img_h/2) / (img_h/2)
+        return (    distance * sin(PhiX)  ,     distance * sin(PhiY)   )
+
 
     def run(self):
         rate = rospy.Rate(10)  # 10Hz
@@ -51,6 +63,8 @@ class ObjectDetectionNode:
                 y_milieu = (y1_rect + y2_rect) / 2
                 z_milieu = depth_frame.get_distance(int(x_milieu), int(y_milieu))
 
+                x_real, y_real = self.getRealXY(x_milieu, y_milieu, z_milieu, w, h)
+
                 if label in ["suitcase", "handbag", "backpack"]:
                     # Publication des données
                     self.label_pub.publish(label)
@@ -63,8 +77,8 @@ class ObjectDetectionNode:
                     transform.header.frame_id = 'col_camera_sensor_d455_link'  # Frame de référence global
                     transform.child_frame_id = "OBJ_" + label + '_link' # Frame de l'objet détecté 
                     transform.transform.translation.x = z_milieu
-                    transform.transform.translation.y = x_milieu
-                    transform.transform.translation.z = y_milieu
+                    transform.transform.translation.y = x_real
+                    transform.transform.translation.z = y_real
                     transform.transform.rotation.x = 0.0
                     transform.transform.rotation.y = 0.0
                     transform.transform.rotation.z = 0.0
